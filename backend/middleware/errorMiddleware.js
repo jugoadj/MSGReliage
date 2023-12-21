@@ -13,4 +13,15 @@ const errorHandler = (err, req, res, next) => {//errorHandler : Ce middleware es
   });
 };
 
-module.exports = { notFound, errorHandler };
+const uploadErrors = (err) => {
+  let errors = { format: "", maxSize: "" };
+  if (err.message.includes("invalid file")) {
+    errors.format = "Format incompatabile";
+  }
+  if(err.message.includes('max size')){
+    errors.maxSize = "Le fichier dépasse 500ko";
+  }
+  return errors;
+}
+
+module.exports = { notFound, errorHandler, uploadErrors };

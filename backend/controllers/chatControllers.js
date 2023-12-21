@@ -6,7 +6,7 @@ const User = require("../models/userModel");
 //@route           POST /api/chat/
 //@access          Protected
 const accessChat = asyncHandler(async (req, res) => {
-  const { userId } = req.body; // extrait la propriété userId du corps de la requête HTTP (req.body) que le client a enver en utilisant post {{url}}/api/chat. avec comme body de la requete {userId: "l'id de l'utilisateur avec qui on veut creer un chat"}
+  const { userId } = req.body; // extrait la propriété userId du corps de la requête HTTP (req.body) que le client a envoyer en utilisant post {{url}}/api/chat. avec comme body de la requete {userId: "l'id de l'utilisateur avec qui on veut creer un chat"}
 
 
   if (!userId) {// si userid n'existe pas dans req.body on renvoie une erreur 400 avec un message d'erreur.
@@ -18,7 +18,7 @@ const accessChat = asyncHandler(async (req, res) => {
     //actuellement connecté (req.user._id) et l'utilisateur spécifié par userId.
     isGroupChat: false,
     $and: [//
-      { users: { $elemMatch: { $eq: req.user._id } } },
+      { users: { $elemMatch: { $eq: req.user._id } } }, //req.user._id est l'utilisateur actuellement connecté.(authentifié) qu'on a stocker dans req.user grace au middleware protect
       { users: { $elemMatch: { $eq: userId } } },
     ],
   })
@@ -34,7 +34,7 @@ const accessChat = asyncHandler(async (req, res) => {
     res.send(isChat[0]);
   } else {
     var chatData = {
-      chatName: "sender",
+      chatName: req.body.name,
       isGroupChat: false,
       users: [req.user._id, userId], // les users du chat sont l'utilisateur actuellement connecté et l'utilisateur spécifié par userId.(envoyer par la requete du client dans req.body)
     };
@@ -61,10 +61,10 @@ const fetchChats = asyncHandler(async (req, res) => {
     Chat.find({ users: { $elemMatch: { $eq: req.user._id } } })
     // trouver tous les chats qui contiennent l'utilisateur actuellement connecté dans leur tableau users
       .populate("users", "-password")// remplit les informations des utilisateurs de chaque chat, à l'exception de leur mot de passe.
-      .populate("latestMessage")// remplit les informations du dernier message de chaque chat.
+      .populate("latestMessage")// remplit les informations du dernier message de chaque chat par 
       .sort({ updatedAt: -1 })//
       .then(async (results) => {
-        results = await User.populate(results, { // emplit les informations de l'utilisateur qui a envoyé le dernier message de chaque chat,
+        results = await User.populate(results, { // remplit les informations de l'utilisateur qui a envoyé le dernier message de chaque chat,
           path: "latestMessage.sender",
           select: "name pic email",
         });
@@ -142,6 +142,7 @@ const renameGroup = asyncHandler(async (req, res) => {
   }
 });
 
+
 // @desc    Remove user from Group
 // @route   PUT /api/chat/groupremove
 // @access  Protected
@@ -205,4 +206,5 @@ module.exports = {
   renameGroup,
   addToGroup,
   removeFromGroup,
+  
 };

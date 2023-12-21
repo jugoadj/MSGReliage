@@ -24,6 +24,15 @@ const chatModel = mongoose.Schema( //un modèle Mongoose pour une collection "ch
       type: mongoose.Schema.Types.ObjectId,
       ref: "Message",
     },
+    
+  
+    deleted:[
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Chat"
+      }
+
+    ],
     groupAdmin: { //contien les id des users 
         type: mongoose.Schema.Types.ObjectId,
         ref: "User" 
@@ -40,3 +49,5 @@ const Chat = mongoose.model("Chat", chatModel);//Utilise le schéma chatmodel d�
 //collection "chats". Par exemple, pour créer un nouveau document, vous pouvez faire const newChat = new Chat({ chatName: 'Example Chat' }); newChat.save();.
 
 module.exports = Chat;//Exporte le modèle "Chat" pour qu'il puisse être utilisé dans d'autres parties de l'application.
+
+

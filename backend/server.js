@@ -30,6 +30,8 @@ app.get('/', (req, res) => {//Ici, on définit une route qui répond à la méth
 app.use('/api/user', userRoutes); // /api/user' est le chemin auquel le middleware userRoutes est monté. 
 ///Cela signifie que toutes les requêtes qui commencent par /api/user seront gérées par userRoutes.
 
+app.use('/uploads', express.static('uploads'));//pour rendre le dossier uploads static pour pouvoir y acceder depuis le frontend
+
 app.use('/api/chat', chatRoutes); 
 app.use('/api/message', messageRoutes);
 
@@ -48,37 +50,47 @@ const PORT = process.env.PORT || 5000;
 // serveur en écoutant sur un port spécifié.
 const server = app.listen(5000, console.log(`server started on port ${PORT}`));
 
-const io = require("socket.io")(server, {
-    pingTimeout: 60000,
+const io = require("socket.io")(server, { //initialise Socket.IO sur le serveur HTTP
+    pingTimeout: 60000, // délai d'attente de ping de 60 secondes et autorise les requêtes CORS provenant de "http://localhost:3000"
     cors: {
         origin: "http://localhost:3000",
         methods: ["GET", "POST"],
     },
 });
 
-io.on("connection", (socket) => {
+io.on("connection", (socket) => { // fonction est exécutée chaque fois qu'un client se connecte au serveur
   console.log("Connected to socket.io");
-  socket.on("setup", (userData) => {
-    socket.join(userData._id);
-    socket.emit("connected");
+  socket.on("setup", (userData) => { //lorsque le client se connecte, il envoie un événement "setup" au serveur avec les données de l'utilisateur
+    //userData est un objet contenant des informations sur l'utilisateur qui s'est connecté. Cet objet est envoyé par le 
+    //client lorsqu'il émet l'événement "setup"
+    socket.join(userData._id);// 
+    socket.emit("connected");//le serveur envoie un événement "connected" au client pour confirmer que la connexion a réussi
   });
 
-  socket.on("join chat", (room) => {
-    socket.join(room);
+  //Lorsqu'un utilisateur veut rejoindre une conversation, il envoie un événement "join chat" avec l'identifiant de la 
+  //conversation comme room. Le serveur reçoit cet événement, et avec socket.join(room), il ajoute le client à cette room.
+  // Ainsi, lorsque des messages sont envoyés dans cette conversation, seuls les clients dans cette room les reçoivent.
+
+  socket.on("join chat", (room) => { //Lorsqu'un événement "join chat" est reçu (envoyer par le client), le serveur fait rejoindre au client la salle spécifiée
+    socket.join(room); // le serveur ajoute le client à la salle spécifiée
     console.log("User Joined Room: " + room);
   });
-  socket.on("typing", (room) => socket.in(room).emit("typing"));
+  socket.on("typing", (room) => socket.in(room).emit("typing")); //Lorsque le serveur reçoit un événement "typing" d'un client, il émet à son tour un événement "typing" à tous les autres clients dans la même "room".
   socket.on("stop typing", (room) => socket.in(room).emit("stop typing"));
 
-  socket.on("new message", (newMessageRecieved) => {
-    var chat = newMessageRecieved.chat;
+  socket.on("new message", (newMessageRecieved) => {// Lorsque le serveur reçoit un événement "new message" d'un client, il émet à son tour un événement "message received" à tous les autres clients dans la même "room".
+    var chat = newMessageRecieved.chat; //extrait l'objet chat du message reçu
 
-    if (!chat.users) return console.log("chat.users not defined");
+    if (!chat.users) {
+      return console.log("chat.users not defined");
+    } // vérifie si l'objet chat a une propriété users
 
-    chat.users.forEach((user) => {
-      if (user._id == newMessageRecieved.sender._id) return;
+    chat.users.forEach((user) => { //parcourt chaque utilisateur dans chat.users.
+      if (user._id == newMessageRecieved.sender._id) {
+        return;
+      }// Si l'ID de l'utilisateur est le même que l'ID de l'expéditeur du message, la fonction retourne immédiatement, ce qui signifie que le message n'est pas envoyé à l'expéditeur
 
-      socket.in(user._id).emit("message recieved", newMessageRecieved);
+      socket.in(user._id).emit("message recieved", newMessageRecieved); // Pour chaque utilisateur dans chat.users qui n'est pas l'expéditeur, le serveur envoie un événement "message received" avec le message original. Cela signifie que chaque utilisateur du chat reçoit le nouveau message
     });
   });
 
@@ -87,3 +99,10 @@ io.on("connection", (socket) => {
     socket.leave(userData._id);
   });
 });
+
+// userData : C'est un objet qui contient des informations sur l'utilisateur qui s'est connecté. Il est envoyé par le client lorsqu'il émet l'événement "setup".
+
+// room : C'est l'identifiant de la salle de chat à laquelle un utilisateur souhaite se joindre. Lorsqu'un utilisateur envoie un événement "join chat", il inclut cet identifiant de salle de chat comme room.
+
+// newMessageRecieved : C'est un objet qui contient le nouveau message qu'un utilisateur a envoyé. Lorsqu'un utilisateur envoie un message, il est reçu par le serveur comme un événement "new message" avec cet objet newMessageRecieved
+//Lorsqu'un client envoie un message, il émet un événement "new message" à l'aide de la méthode emit de socket.io. L'objet message est passé en tant que paramètre à cette méthode emit.

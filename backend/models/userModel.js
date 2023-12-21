@@ -20,7 +20,7 @@ const userSchema = mongoose.Schema(// un schéma est une représentation de la s
     },
     isAdmin: {
       type: Boolean,
-      required: true,
+      required: true, 
       default: false,
     },
   },

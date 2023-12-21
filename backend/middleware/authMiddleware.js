@@ -22,8 +22,9 @@ const protect = asyncHandler(async (req, res, next) => {
       //décode le token en utilisant la clé secrète JWT (stockée dans process.env.JWT_SECRET).
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      req.user = await User.findById(decoded.id).select("-password");//utilise l'ID utilisateur décodé du token pour rechercher l'utilisateur dans la base de données (en excluant le mot de passe de l'utilisateur de la réponse).
-
+      req.user = await User.findById(decoded.id).select("-password");//récupère l'utilisateur à partir de la base de données en utilisant l'ID stocké dans le token décodé.
+      //req.user est maintenant disponible dans toutes les routes protégées, ce qui nous permet d'accéder à l'utilisateur connecté.
+      //req.user contient tous les détails de l'utilisateur, à l'exception de son mot de passe.
       next();
     } catch (error) { // si le token est invalide), il renvoie une réponse avec un statut 401 et un message d'erreur.
       res.status(401);

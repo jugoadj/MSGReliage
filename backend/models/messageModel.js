@@ -15,6 +15,14 @@ const messageSchema = mongoose.Schema(
         type: String, 
         trim: true 
     },
+
+    file: { // Nouveau champ pour stocker l'URL du fichier
+        type: String,
+        trim: true
+    },
+    //Pour récupérer tous les fichiers envoyés dans une conversation, on vaeffectuer une requête sur la collection Message pour obtenir tous les messages 
+    //avec un chatId spécifique et un file non nul. Vous pouvez ensuite renvoyer les URL des fichiers dans la réponse à la requête.
+
     chat: {  
         type: mongoose.Schema.Types.ObjectId, 
         ref: "Chat" 
@@ -25,6 +33,7 @@ const messageSchema = mongoose.Schema(
         ref: "User" 
         }
     ],
+    
   },
   { timestamps: true }
 );
