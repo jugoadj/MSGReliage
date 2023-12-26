@@ -3,7 +3,7 @@ const {
   allMessages,
   sendMessage,
   sendFiles,
-  // fetchFiles,
+  fetchFiles,
   transferMessage,
   deleteAllMsgs,
   deleteOneMsg,
@@ -32,7 +32,7 @@ router.post("/upload", protect, upload.single('file'),  sendFiles); //upload.sin
 //quand on fais une requête post vers /api/message/upload on va appeler la fonction sendMessage mais 
 //on va stocker limage en static et on va enregistrer le chemin de limage dans la base de données
 router.route("/:chatId").get(protect, allMessages);
-// router.route("/:chatId/files").get(protect, fetchFiles);
+router.route("/:chatId/files").get(protect, fetchFiles);
 
 router.route("/Supp/:chatId").get(protect, deleteAllMsgs);
 router.route("/Supp/:chatId/:MsgId").get(protect, deleteOneMsg);

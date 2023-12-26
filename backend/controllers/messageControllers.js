@@ -184,4 +184,4 @@ const deleteOneMsg = asyncHandler(async (req, res) => {
 })
 
 
-module.exports = { allMessages, sendMessage, deleteAllMsgs, deleteOneMsg, transferMessage, sendFiles};
+module.exports = { allMessages, sendMessage, deleteAllMsgs, deleteOneMsg, transferMessage, sendFiles, fetchFiles};
