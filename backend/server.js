@@ -1,18 +1,44 @@
 const express = require("express"); //importe le module express et le stocker dans la variable express pour pouvoir etuliser les fonctionnalite de express juste avec la variable non pas en le chargant a chaque fois
 const dotenv = require("dotenv"); //import le module dotenv quon a istalller 
 // const { chats } = require("./data/data");//mportée un objet nommé chats à partir d'un module situé dans le fichier "./data/data"
+const bodyParser = require('body-parser');
+const cookieParser = require('cookie-parser');
+
 const connectDB = require("./config/db");//importer le module connectDB à partir du fichier ./config/db.js
-const userRoutes = require("./routes/userRoutes");//importer le module userRoutes à partir du fichier ./routes/userRoutes.js
+const userRoutes = require("./routes/user.routes");//importer le module userRoutes à partir du fichier ./routes/userRoutes.js
+const emailRoutes = require ('./routes/email.routes');
+
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
 const chatRoutes  = require("./routes/chatRoutes");
 const messageRoutes  = require("./routes/messageRoutes");
+const {checkUser, requireAuth} = require ('./middleware/authMiddleware');
+const cors = require('cors');
 
 dotenv.config(); //charger les variables d'environnement à partir d'un fichier .env
 
 connectDB(); // appeler la fonction connectDB pour établir une connexion à la base de données MongoDB.
-//dans server.js, on appele connectDB() pour initier cette connexion lorsque le serveur démarre.
 
 const app = express(); //réez une instance d'application Express. Cette instance représente votre application web.
+
+const corsOptions = { 
+    origin: process.env.CLIENT_URL,
+    credentials: true,
+    'allowedHeaders': ['sessionId', 'Content-Type'],
+    'exposedHeaders': ['sessionId'],
+    'methods': 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    'preflightContinue': false
+}
+
+app.use(cors(corsOptions));//
+
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({extended: true}));
+app.use(cookieParser());
+
+app.get('*', checkUser ); // pour que checkUser soit appelé sur toutes les routes
+app.get('/jwtid', requireAuth, (req, res) => { //pour récupérer l'id de l'utilisateur connecté
+    res.status(200).send(res.locals.user._id)
+});
 
 app.use(express.json()); //utiliser le middleware express.json pour analyser le corps des requêtes envoyées au serveur en tant que JSON. (pour accepter les data json)
 
@@ -29,6 +55,7 @@ app.get('/', (req, res) => {//Ici, on définit une route qui répond à la méth
 
 app.use('/api/user', userRoutes); // /api/user' est le chemin auquel le middleware userRoutes est monté. 
 ///Cela signifie que toutes les requêtes qui commencent par /api/user seront gérées par userRoutes.
+app.use('/api/email', emailRoutes);
 
 app.use('/uploads', express.static('uploads'));//pour rendre le dossier uploads static pour pouvoir y acceder depuis le frontend
 
@@ -48,7 +75,9 @@ const PORT = process.env.PORT || 5000;
 
 //Vous utilisez l'instance de l'application (express qu'on a stocker dans la variable app) pour démarrer le 
 // serveur en écoutant sur un port spécifié.
-const server = app.listen(5000, console.log(`server started on port ${PORT}`));
+const server = app.listen(process.env.PORT, () => {
+    console.log(`Listenning to port ${process.env.PORT}`);
+})
 
 const io = require("socket.io")(server, { //initialise Socket.IO sur le serveur HTTP
     pingTimeout: 60000, // délai d'attente de ping de 60 secondes et autorise les requêtes CORS provenant de "http://localhost:3000"

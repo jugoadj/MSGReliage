@@ -1,11 +1,17 @@
 const asyncHandler = require("express-async-handler");
 const Chat = require("../models/chatModel");
-const User = require("../models/userModel");
+const UserModel = require("../models/userModel");
 
 //@description     Create or fetch One to One Chat
 //@route           POST /api/chat/
 //@access          Protected
 const accessChat = asyncHandler(async (req, res) => {
+  
+  if (!res.locals.user) {// si l'utilisateur n'est pas connecté on renvoie une erreur 401
+    console.log("User is not authenticated");
+    return res.sendStatus(401); // 401 Unauthorized
+  }
+
   const { userId } = req.body; // extrait la propriété userId du corps de la requête HTTP (req.body) que le client a envoyer en utilisant post {{url}}/api/chat. avec comme body de la requete {userId: "l'id de l'utilisateur avec qui on veut creer un chat"}
 
 
@@ -15,17 +21,17 @@ const accessChat = asyncHandler(async (req, res) => {
   }
   
   var isChat = await Chat.find({// requete a la base données pour trouver un chat qui n'est pas un groupe et qui contient à la fois l'utilisateur 
-    //actuellement connecté (req.user._id) et l'utilisateur spécifié par userId.
+    //actuellement connecté (res.locals.user._id) et l'utilisateur spécifié par userId.
     isGroupChat: false,
     $and: [//
-      { users: { $elemMatch: { $eq: req.user._id } } }, //req.user._id est l'utilisateur actuellement connecté.(authentifié) qu'on a stocker dans req.user grace au middleware protect
+      { users: { $elemMatch: { $eq: res.locals.user._id} } }, //res.locals.user._id est l'utilisateur actuellement connecté.(authentifié) qu'on a stocker dans res.locals.user grace au middleware protect
       { users: { $elemMatch: { $eq: userId } } },
     ],
   })
     .populate("users", "-password")// remplir les informations des utilisateurs de chaque chat, à l'exception de leur mot de passe.
     .populate("latestMessage");// remplir les informations du dernier message de chaque chat.
 
-  isChat = await User.populate(isChat, { //appelle la méthode populate sur le modèle User de Mongoose. Elle prend deux arguments : le document ou la liste de documents à peupler (dans ce cas, isChat), et un objet qui spécifie comment peupler les documents.
+  isChat = await UserModel.populate(isChat, { //appelle la méthode populate sur le modèle UserModel de Mongoose. Elle prend deux arguments : le document ou la liste de documents à peupler (dans ce cas, isChat), et un objet qui spécifie comment peupler les documents.
     path: "latestMessage.sender",
     select: "name pic email",
   });
@@ -36,7 +42,7 @@ const accessChat = asyncHandler(async (req, res) => {
     var chatData = {
       chatName: req.body.name,
       isGroupChat: false,
-      users: [req.user._id, userId], // les users du chat sont l'utilisateur actuellement connecté et l'utilisateur spécifié par userId.(envoyer par la requete du client dans req.body)
+      users: [res.locals.user._id, userId], // les users du chat sont l'utilisateur actuellement connecté et l'utilisateur spécifié par userId.(envoyer par la requete du client dans req.body)
     };
 
     try {
@@ -58,13 +64,13 @@ const accessChat = asyncHandler(async (req, res) => {
 //@access          Protected
 const fetchChats = asyncHandler(async (req, res) => {
   try {
-    Chat.find({ users: { $elemMatch: { $eq: req.user._id } } })
+    Chat.find({ users: { $elemMatch: { $eq: res.locals.user._id } } })
     // trouver tous les chats qui contiennent l'utilisateur actuellement connecté dans leur tableau users
       .populate("users", "-password")// remplit les informations des utilisateurs de chaque chat, à l'exception de leur mot de passe.
       .populate("latestMessage")// remplit les informations du dernier message de chaque chat par 
       .sort({ updatedAt: -1 })//
       .then(async (results) => {
-        results = await User.populate(results, { // remplit les informations de l'utilisateur qui a envoyé le dernier message de chaque chat,
+        results = await UserModel.populate(results, { // remplit les informations de l'utilisateur qui a envoyé le dernier message de chaque chat,
           path: "latestMessage.sender",
           select: "name pic email",
         });
@@ -92,9 +98,9 @@ const createGroupChat = asyncHandler(async (req, res) => {
       .send("More than 2 users are required to form a group chat");
   }
 
-  users.push(req.user);// on ajoute l'utilisateur actuellement connecté au groupe
+  users.push(res.locals.user);// on ajoute l'utilisateur actuellement connecté au groupe
 
-  //req.user est l'utilisateur actuellement connecté.(authentifié) qu'on a stocker dans req.user grace au middleware protect
+  //res.locals.user est l'utilisateur actuellement connecté.(authentifié) qu'on a stocker dans res.locals.user grace au middleware protect
 
   //req.body.users fait référence à une propriété users dans le corps de la requête HTTP. envoyée par le client lorsqu'il fait une requête àu serveur.  req.body.users est une chaine JSON qui représente une liste d'utilisateur
   try {
@@ -102,7 +108,7 @@ const createGroupChat = asyncHandler(async (req, res) => {
       chatName: req.body.name,
       users: users,
       isGroupChat: true,
-      groupAdmin: req.user, // l'utilisateur actuellement connecté est l'administrateur du groupe
+      groupAdmin: res.locals.user, // l'utilisateur actuellement connecté est l'administrateur du groupe
     });
 
     const fullGroupChat = await Chat.findOne({ _id: groupChat._id })// on recupere le groupe qu'on vient de creer dans la base de données

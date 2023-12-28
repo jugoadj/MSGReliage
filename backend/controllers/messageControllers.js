@@ -1,6 +1,6 @@
 const asyncHandler = require("express-async-handler");
 const Message = require("../models/messageModel");
-const User = require("../models/userModel");
+const UserModel = require("../models/userModel");
 const Chat = require("../models/chatModel");
 
 
@@ -13,7 +13,7 @@ const transferMessage = async (req, res) => {
   }
 
   var newMessage = {
-    sender: req.user._id, 
+    sender: res.locals.user._id, 
     chat: chatId,
     content: messageId.content,
   };
@@ -23,7 +23,7 @@ const transferMessage = async (req, res) => {
 
     message = await message.populate("sender", "name pic"); // peuple le champ sender (qui est un ID de l'utilisateur) avec les détails de l'utilisateur correspondant (nom et image).
     message = await message.populate("chat"); // peuple le champ chat (qui est un ID du chat) avec les détails du chat correspondant (nom et image).
-    message = await User.populate(message, {// peuple le champ chat.users (qui est un tableau d'ID d'utilisateurs) avec les détails des utilisateurs correspondants (nom, image et email). 
+    message = await UserModel.populate(message, {// peuple le champ chat.users (qui est un tableau d'ID d'utilisateurs) avec les détails des utilisateurs correspondants (nom, image et email). 
       path: "chat.users", 
       select: "name pic email",
     });
@@ -49,7 +49,7 @@ const sendFiles = asyncHandler(async (req, res) => {
   }
 
   var newMessage = {
-    sender: req.user._id, 
+    sender: res.locals.user._id, 
     chat: chatId,
     file: file.path, // Le chemin du fichier téléchargé
   };
@@ -59,7 +59,7 @@ const sendFiles = asyncHandler(async (req, res) => {
     console.log("fichier enregistere dans la base de donnees");
     message = await message.populate("sender", "name pic"); // peuple le champ sender (qui est un ID de l'utilisateur) avec les détails de l'utilisateur correspondant (nom et image).
     message = await message.populate("chat"); // peuple le champ chat (qui est un ID du chat) avec les détails du chat correspondant (nom et image).
-    message = await User.populate(message, {// peuple le champ chat.users (qui est un tableau d'ID d'utilisateurs) avec les détails des utilisateurs correspondants (nom, image et email). 
+    message = await UserModel.populate(message, {// peuple le champ chat.users (qui est un tableau d'ID d'utilisateurs) avec les détails des utilisateurs correspondants (nom, image et email). 
       path: "chat.users", 
       select: "name pic email",
     });
@@ -96,14 +96,13 @@ const fetchFiles = asyncHandler(async (req, res) => {
 const sendMessage = asyncHandler(async (req, res) => {
   const { content, chatId } = req.body; 
   
-
   if (!content || !chatId ) {
     console.log("Invalid data passed into request");
     return res.sendStatus(400);
   }
 
   var newMessage = {  //détails du message.
-    sender: req.user._id, //l'id de l'utilisateur qui a envoyé le message qu'on a récupéré à partir du token d'authentification.
+    sender: res.locals.user._id, //l'id de l'utilisateur qui a envoyé le message qu'on a récupéré à partir du token d'authentification.
     content: content,
     chat: chatId,
     
@@ -114,7 +113,7 @@ const sendMessage = asyncHandler(async (req, res) => {
 
     message = await message.populate("sender", "name pic"); // peuple le champ sender (qui est un ID de l'utilisateur) avec les détails de l'utilisateur correspondant (nom et image).
     message = await message.populate("chat"); // peuple le champ chat (qui est un ID du chat) avec les détails du chat correspondant (nom et image).
-    message = await User.populate(message, {// peuple le champ chat.users (qui est un tableau d'ID d'utilisateurs) avec les détails des utilisateurs correspondants (nom, image et email). 
+    message = await UserModel.populate(message, {// peuple le champ chat.users (qui est un tableau d'ID d'utilisateurs) avec les détails des utilisateurs correspondants (nom, image et email). 
       path: "chat.users", 
       select: "name pic email",
     });
@@ -122,6 +121,7 @@ const sendMessage = asyncHandler(async (req, res) => {
     await Chat.findByIdAndUpdate(req.body.chatId, { latestMessage: message });// on met à jour le dernier message du chat dans la base de données.
 
     res.json(message); //envoyer le message créé en réponse à la requête HTTP.
+
   } catch (error) {
     res.status(400);
     throw new Error(error.message);
