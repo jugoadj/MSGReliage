@@ -87,6 +87,8 @@ const io = require("socket.io")(server, { //initialise Socket.IO sur le serveur 
     },
 });
 
+
+
 io.on("connection", (socket) => { // fonction est exécutée chaque fois qu'un client se connecte au serveur
   console.log("Connected to socket.io");
   socket.on("setup", (userData) => { //lorsque le client se connecte, il envoie un événement "setup" au serveur avec les données de l'utilisateur

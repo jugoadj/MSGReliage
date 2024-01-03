@@ -111,7 +111,7 @@ const sendMessage = asyncHandler(async (req, res) => {
   try {
     var message = await Message.create(newMessage); // crée un nouveau message dans la base de données 
 
-    message = await message.populate("sender", "name pic"); // peuple le champ sender (qui est un ID de l'utilisateur) avec les détails de l'utilisateur correspondant (nom et image).
+    message = await message.populate("sender", "name picture"); // peuple le champ sender (qui est un ID de l'utilisateur) avec les détails de l'utilisateur correspondant (nom et image).
     message = await message.populate("chat"); // peuple le champ chat (qui est un ID du chat) avec les détails du chat correspondant (nom et image).
     message = await UserModel.populate(message, {// peuple le champ chat.users (qui est un tableau d'ID d'utilisateurs) avec les détails des utilisateurs correspondants (nom, image et email). 
       path: "chat.users", 

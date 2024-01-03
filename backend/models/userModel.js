@@ -56,7 +56,7 @@ const userSchema = new mongoose.Schema(
     },
     picture: {
       type: String,
-      default: "./uploads/profil/random-user.png"
+      default: "https://icon-library.com/images/anonymous-avatar-icon/anonymous-avatar-icon-25.jpg"
     },
     bio :{
       type: String,
@@ -81,6 +81,12 @@ const userSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+//on cree une fonction matchPassword qui est un fonction pour comparer les  mot de passe elle prend en paramettre le mot de passe entrer par le user et le compare avec le mot de passe hacher stocker dans la base de donnees
+userSchema.methods.matchPassword = async function (enteredPassword) {
+  //bcrypt est une fonction qui prend le mot de passe en clair entrer paruser et le mot de passe haché, les compare et renvoie true si ils correspondent, false sinon. this.password fait référence au mot de passe de l'utilisateur actuel (celui qui est stocké dans la base de données).
+  return await bcrypt.compare(enteredPassword, this.password); 
+};
 
 // play function before save into display: 'block',
 // play function before save into display: 'block',

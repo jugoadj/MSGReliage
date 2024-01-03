@@ -1,9 +1,13 @@
-const UserModel =require('../models/userModel');
+const UserModel = require('../models/userModel');
 const jwt = require('jsonwebtoken');
 const { signUpErrors, signInErrors } = require('../utils/errors.utils');
 const nodemailer = require('../config/nodemailer');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
+const generateToken = require("../config/generateToken");
+const asyncHandler = require('express-async-handler');
+
+
 
 const maxAge = 3 * 24 * 60 * 60 * 1000;
 const createToken = (id) => {
@@ -20,8 +24,33 @@ module.exports.signUp = async (req,res) => {
           
   }
    try {
+
+    const userExists = await UserModel.findOne({ email, name });
+    if (userExists) { //si l'utilisateur existe déjà dans la base de données. elle renvoie une erreur 400 avec un message d'erreur.    
+        res.status(400);
+        throw new Error('Cet utilisateur existe déjà');
+    }
+
     const user = await UserModel.create({name, pseudo, email, trustedEmail, password, secretAnswer, secretQuestion});
-    res.status(201).json({user: user._id})
+
+    if (user) { // si l'utilisateur a été créé avec succès.  elle renvoie une réponse 201 avec les informations de l'utilisateur et un token généré. Sinon, elle renvoie une erreur 400 avec un message d'erreur.
+            res.status(201).json({
+                _id: user._id, // l'id unique de l'utilisateur (_id) qui a ete cree automatiquement par mongodb lorsque on un inserer un nouveau user dans la base de donnees 
+                name: user.name,
+                pseudo: user.pseudo,
+                email: user.email,
+                pic: user.picture,
+                token: generateToken(user._id), //fonction qui génère un token JWT (JSON Web Token) pour l'utilisateur
+                //ID est passée à la fonction generateToken pour créer un token (jwt ) unique pour cet utilisateur. 
+                //un token est une chaîne de caractères cryptée qui contient des informations sur l'utilisateur. Il est généralement 
+                //envoyé au client après une réussite de connexion, et le client doit ensuite l'inclure dans les en-têtes de ses requêtes pour prouver qu'il est authentifié.
+                
+            });
+        } else {
+            res.status(400);
+            throw new Error('Données invalides user pas cree');
+        }
+
    }
    catch (err) {
     console.log(err); 
@@ -31,19 +60,37 @@ module.exports.signUp = async (req,res) => {
    }
 }
 
-module.exports.signIn = async (req, res) => {
-   const {email, password} = req.body
-   try {
-      const user = await UserModel.login(email, password);
-      const token = createToken(user._id);
-      res.cookie('jwt', token, {httpOnly: true, maxAge});
-      res.status(200).json({user: user._id})
-   }
-   catch (err) {
-      const errors = signInErrors(err);
-      res.status(200).json({errors});
-   }
-}
+module.exports.signIn = asyncHandler( async (req, res) => {
+   
+    try {
+        const {email, password} = req.body;
+        const user = await UserModel.findOne({ email }); //recherche l'utilisateur dans la base de données par son email si il existe alors user = true
+    
+        if (user && (await user.matchPassword(password))) { //si l'utilisateur existe et que le mot de passe entré correspond au mot de passe haché stocké dans la base de données. elle renvoie une réponse 200 avec les informations de l'utilisateur et un token généré. Sinon, elle renvoie une erreur 400 avec un message d'erreur. 
+            const token = createToken(user._id);
+            res.cookie('jwt', token, {httpOnly: true, maxAge});     
+            //on va comparer les deux mdp grace a la fonction matchPassword qu'on a creer dans le model usermodel.js  
+            res.json({
+                _id: user._id,
+                name: user.name,
+                pseudo:user.pseudo,
+                email: user.email,
+                pic: user.picture,
+                token: token,
+            });
+        }
+        else {
+            res.status(400);
+            throw new Error('Email ou mot de passe incorrect');
+        }
+
+    } catch (error) {
+      // Handle the error
+      res.status(400).json({ message: error.message });
+    }
+});
+   
+
 
 module.exports.logOut = (req, res) => {
    res.cookie('jwt', '',{maxAge: 1});
