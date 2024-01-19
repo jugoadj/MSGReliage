@@ -35,7 +35,7 @@ router.post("/upload",checkUser, upload.single('file'),  sendFiles); //upload.si
 router.route("/:chatId").get(checkUser, allMessages);
 router.route("/:chatId/files").get(checkUser, fetchFiles);
 
-router.route("/Supp/:chatId").get(checkUser, deleteAllMsgs);
-router.route("/Supp/:chatId/:MsgId").get(checkUser, deleteOneMsg);
+router.route("/Supp/:chatId").delete(checkUser, deleteAllMsgs);
+router.route("/Supp/:MsgId").get(checkUser, deleteOneMsg);
 
 module.exports = router;
